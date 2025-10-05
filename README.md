@@ -5,27 +5,27 @@
 [![spaCy](https://img.shields.io/badge/spaCy-NLP-orange.svg)](https://spacy.io/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-An intelligent, autonomous email reminder system that leverages Natural Language Processing (NLP) to automatically scan Gmail inboxes, identify actionable events such as deadlines, meetings, and tasks, and deliver timely desktop notifications.
+An intelligent email reminder system that uses natural language processing to automatically scan Gmail inboxes, identify deadlines, meetings, and other actionable events, and send timely desktop notifications.
 
-## 📋 Table of Contents
+## Table of Contents
 
-- [Overview](#-overview)
-- [Architecture](#-architecture)
-- [Features](#-features)
-- [Prerequisites](#-prerequisites)
-- [Installation](#-installation)
-- [Configuration](#-configuration)
-- [Usage](#-usage)
-- [Testing](#-testing)
-- [Deployment](#-deployment)
-- [Security](#-security)
-- [Project Structure](#-project-structure)
-- [Contributing](#-contributing)
-- [License](#-license)
+- [Overview](#overview)
+- [Architecture](#architecture)
+- [Features](#features)
+- [Prerequisites](#prerequisites)
+- [Installation](#installation)
+- [Configuration](#configuration)
+- [Usage](#usage)
+- [Testing](#testing)
+- [Deployment](#deployment)
+- [Security](#security)
+- [Project Structure](#project-structure)
+- [Contributing](#contributing)
+- [License](#license)
 
-## 🎯 Overview
+## Overview
 
-The Smart Email Reminder System is a sophisticated Python application that transforms passive email communication into proactive task management. By employing advanced NLP techniques, the system autonomously analyzes incoming emails to extract temporal information and actionable events, ensuring users never miss important deadlines or appointments.
+The Smart Email Reminder System is a Python application that uses natural language processing to scan Gmail inboxes and identify important events like deadlines and meetings. It automatically sends desktop notifications to help users stay on top of their schedule.
 
 ### Key Capabilities
 
@@ -35,7 +35,7 @@ The Smart Email Reminder System is a sophisticated Python application that trans
 - **Enterprise Security**: OAuth 2.0 authentication with secure credential management
 - **Modular Architecture**: Clean separation of concerns for maintainability and extensibility
 
-## 🏗️ Architecture
+## Architecture
 
 The system implements a modular, microservices-inspired architecture with five core components:
 
@@ -69,41 +69,41 @@ The system implements a modular, microservices-inspired architecture with five c
 - Error handling and recovery mechanisms
 - Continuous operation with configurable intervals
 
-## ✨ Features
+## Features
 
-### 🤖 Autonomous Operation
-- Continuous background monitoring with user-configurable intervals
+### Autonomous Operation
+- Continuous background monitoring with configurable intervals
 - Zero manual intervention required after initial setup
 - Intelligent duplicate detection and notification throttling
 
-### 🧠 Advanced NLP Processing
+### Advanced NLP Processing
 - spaCy-based Named Entity Recognition for temporal expressions
 - Context-aware date parsing with multiple format support
 - Intelligent event classification and urgency assessment
 
-### 📧 Comprehensive Email Analysis
+### Comprehensive Email Analysis
 - Support for complex email formats (HTML, plain text, multipart)
 - Header decoding for international character sets
 - Subject line and body content integration
 
-### 🔔 Intelligent Notifications
+### Intelligent Notifications
 - Native desktop notifications with rich formatting
-- Windows-specific toast notifications with action buttons
+- Windows-specific toast notifications with PowerShell integration
 - Console fallback for guaranteed visibility
 - Configurable notification urgency levels
 
-### 🔒 Enterprise-Grade Security
+### Enterprise-Grade Security
 - OAuth 2.0 token-based authentication
 - Secure credential storage with environment variables
 - No sensitive data in application code
 - Automatic token refresh and session management
 
-### ⚡ Performance Optimized
+### Performance Optimized
 - Server-side email filtering to minimize API calls
 - Efficient text processing with caching mechanisms
 - Background operation with minimal system resource usage
 
-## 📋 Prerequisites
+## Prerequisites
 
 ### System Requirements
 - **Python**: 3.8 or higher
@@ -133,7 +133,7 @@ schedule==1.2.0
 en-core-web-sm==3.7.0
 ```
 
-## 🚀 Installation
+## Installation
 
 ### 1. Clone Repository
 ```bash
@@ -164,7 +164,7 @@ cp .env.example .env
 # Edit .env with your credentials (see Configuration section)
 ```
 
-## ⚙️ Configuration
+## Configuration
 
 ### Gmail API Setup
 1. Visit [Google Cloud Console](https://console.cloud.google.com/)
@@ -194,7 +194,7 @@ REMINDER_EMAIL=your_reminder_email@gmail.com
 3. Generate a 16-digit app password for "Mail"
 4. Use this password in the `SENDER_APP_PASSWORD` field
 
-## 📖 Usage
+## Usage
 
 ### Quick Start
 ```bash
@@ -219,7 +219,7 @@ On first execution, the system will:
 3. Generate and store access tokens locally
 4. Begin monitoring for new emails
 
-## 🧪 Testing
+## Testing
 
 ### Automated Testing
 ```bash
@@ -250,7 +250,7 @@ python send_test_email.py
    - **Code Review**: 25th of current month
    - **Training Session**: Next Monday at 9 AM EST
 
-## 🚢 Deployment
+## Deployment
 
 ### Production Recommendations
 
@@ -287,7 +287,7 @@ COPY . .
 CMD ["python", "main.py", "--once"]
 ```
 
-## 🔒 Security
+## Security
 
 ### Credential Management
 - OAuth 2.0 tokens are stored locally and automatically refreshed
@@ -301,7 +301,7 @@ CMD ["python", "main.py", "--once"]
 - Keep credentials.json secure and never commit to repositories
 - Monitor API usage in Google Cloud Console
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 NLP_Project_Email_Remainder/
@@ -345,7 +345,7 @@ python -m pytest
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 - **Google Gmail API** for email access capabilities
 - **spaCy** for advanced natural language processing
