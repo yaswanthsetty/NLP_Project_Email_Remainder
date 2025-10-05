@@ -78,22 +78,31 @@ def find_actionable_events(text: str) -> List[Dict[str, Any]]:
                 )
                 
                 # Check if dateparser returned a valid datetime and it's in the future
-                if (parsed_datetime and 
-                    isinstance(parsed_datetime, datetime) and 
-                    parsed_datetime > current_time):
+                if parsed_datetime and isinstance(parsed_datetime, datetime):
+                    # Handle timezone-aware vs timezone-naive comparison
+                    if parsed_datetime.tzinfo is not None:
+                        # parsed_datetime is timezone-aware, make current_time aware
+                        current_time_aware = current_time.replace(tzinfo=parsed_datetime.tzinfo)
+                        is_future = parsed_datetime > current_time_aware
+                    else:
+                        # Both are timezone-naive
+                        is_future = parsed_datetime > current_time
                     
-                    # Create event context from surrounding text and context word
-                    event_context = f"{event['context_word']} - {event['surrounding_context']}"
-                    
-                    actionable_events.append({
-                        'event_context': event_context.strip(),
-                        'datetime': parsed_datetime,
-                        'original_text': event['entity_text'],
-                        'entity_label': event['entity_label']
-                    })
+                    if is_future:
+                        # Create event context from surrounding text and context word
+                        event_context = f"{event['context_word']} - {event['surrounding_context']}"
+                        
+                        actionable_events.append({
+                            'event_context': event_context.strip(),
+                            'datetime': parsed_datetime,
+                            'original_text': event['entity_text'],
+                            'entity_label': event['entity_label']
+                        })
                     
             except Exception as e:
-                print(f"Warning: Could not parse date '{event['entity_text']}': {e}")
+                # Suppress timezone warnings but log other errors
+                if "offset-naive and offset-aware" not in str(e):
+                    print(f"Warning: Could not parse date '{event['entity_text']}': {e}")
                 continue
         
         return actionable_events

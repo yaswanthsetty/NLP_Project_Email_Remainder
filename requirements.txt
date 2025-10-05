@@ -3,3 +3,6 @@ google-auth-httplib2
 google-auth-oauthlib
 spacy
 dateparser
+plyer
+python-dotenv
+schedule
