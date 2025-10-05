@@ -21,86 +21,109 @@ load_dotenv()
 
 def send_desktop_notification(title: str, message: str) -> bool:
     """
-    Send a cross-platform desktop notification.
-    
+    Send a cross-platform desktop notification with multiple fallback methods.
+
     Args:
         title: Notification title
         message: Notification message content
-        
+
     Returns:
         bool: True if notification was sent successfully, False otherwise
     """
+    # Clean the message for XML compatibility
+    clean_message = message.replace('\n', ' | ').replace('"', "'").replace('&', '&amp;')
+
     try:
+        # Try plyer first (most reliable cross-platform)
         notification.notify(  # type: ignore
             title=title,
             message=message,
-            timeout=30,  # Increased timeout from 10 to 30 seconds
+            timeout=30,
             app_name="Smart Email Reminder"
         )
         print(f"✅ Desktop notification sent: {title}")
-        print(f"   Message: {message[:100]}...")
         return True
-        
+
     except Exception as e:
         print(f"❌ Plyer notification failed: {e}")
-        
-        # Try Windows-specific fallback
+
+        # Try Windows-specific toast notification
         if platform.system().lower() == "windows":
             try:
                 import subprocess
-                # Use Windows built-in toast notification via PowerShell
-                ps_command = f'''
-                [Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] | Out-Null
-                [Windows.UI.Notifications.ToastNotification, Windows.UI.Notifications, ContentType = WindowsRuntime] | Out-Null
-                [Windows.Data.Xml.Dom.XmlDocument, Windows.Data.Xml.Dom.XmlDocument, ContentType = WindowsRuntime] | Out-Null
 
-                $template = @"
+                # Create a more robust PowerShell command for Windows 11
+                ps_command = f'''
+                try {{
+                    [Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] | Out-Null
+                    [Windows.UI.Notifications.ToastNotification, Windows.UI.Notifications, ContentType = WindowsRuntime] | Out-Null
+                    [Windows.Data.Xml.Dom.XmlDocument, Windows.Data.Xml.Dom.XmlDocument, ContentType = WindowsRuntime] | Out-Null
+
+                    $template = @"
 <toast>
     <visual>
         <binding template="ToastGeneric">
-            <text>{title}</text>
-            <text>{message}</text>
+            <text><![CDATA[{title}]]></text>
+            <text><![CDATA[{clean_message}]]></text>
         </binding>
     </visual>
 </toast>
 "@
 
-                $xml = New-Object Windows.Data.Xml.Dom.XmlDocument
-                $xml.LoadXml($template)
-                $toast = New-Object Windows.UI.Notifications.ToastNotification $xml
-                [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier("Smart Email Reminder").Show($toast)
+                    $xml = New-Object Windows.Data.Xml.Dom.XmlDocument
+                    $xml.LoadXml($template)
+                    $toast = New-Object Windows.UI.Notifications.ToastNotification $xml
+                    [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier("Smart Email Reminder").Show($toast)
+                    Write-Host "Toast notification sent successfully"
+                }} catch {{
+                    Write-Error $_.Exception.Message
+                    exit 1
+                }}
                 '''
-                
-                subprocess.run(["powershell", "-Command", ps_command], 
-                             capture_output=True, text=True, timeout=10)
-                print(f"✅ Windows toast notification sent: {title}")
-                return True
-                
+
+                result = subprocess.run(["powershell", "-Command", ps_command],
+                                      capture_output=True, text=True, timeout=15)
+
+                if result.returncode == 0:
+                    print(f"✅ Windows toast notification sent: {title}")
+                    return True
+                else:
+                    print(f"❌ Windows toast notification failed: {result.stderr}")
+
             except Exception as ps_e:
                 print(f"❌ Windows toast notification also failed: {ps_e}")
-        
-        # Last resort: Console notification
-        print("\n" + "="*60)
-        print("🔔 CONSOLE NOTIFICATION (Fallback)")
-        print("="*60)
-        print(f"📅 {title}")
-        print(f"📝 {message}")
-        print("="*60)
-        print("💡 Enable desktop notifications in Windows Settings for better experience")
-        return True
-        system = platform.system().lower()
-        if system == "linux":
-            print("💡 On Linux, you may need to install: sudo apt-get install libnotify-bin")
-        elif system == "windows":
-            print("💡 On Windows, ensure Windows notifications are enabled")
-            print("   1. Go to Settings > System > Notifications & actions")
-            print("   2. Make sure notifications are enabled")
-            print("   3. Check if Focus Assist/Do Not Disturb is turned off")
-            print("   4. Try running the system as administrator")
-        elif system == "darwin":
-            print("💡 On macOS, ensure notification permissions are granted")
-        
-        return False
+
+    # Last resort: Console notification with enhanced visibility
+    print("\n" + "="*70)
+    print("🔔 REMINDER NOTIFICATION")
+    print("="*70)
+    print(f"📅 {title}")
+    print(f"📝 {message}")
+    print("="*70)
+    print("💡 If you don't see desktop notifications:")
+    print("   1. Check Windows Settings > System > Notifications & actions")
+    print("   2. Make sure notifications are enabled")
+    print("   3. Check if Focus Assist is turned off")
+    print("   4. Try running as administrator")
+    print("="*70)
+
+    return True  # Console notification always "succeeds"
+
+    # Last resort: Console notification with enhanced visibility
+    print("\n" + "="*70)
+    print("🔔 REMINDER NOTIFICATION")
+    print("="*70)
+    print(f"📅 {title}")
+    print(f"📝 {message}")
+    print("="*70)
+    print("💡 If you don't see desktop notifications:")
+    print("   1. Check Windows Settings > System > Notifications & actions")
+    print("   2. Make sure notifications are enabled")
+    print("   3. Check if Focus Assist is turned off")
+    print("   4. Try running as administrator")
+    print("="*70)
+
+    return True  # Console notification always "succeeds"
 
 
 def send_email_reminder(recipient_email: str, subject: str, body: str) -> bool:

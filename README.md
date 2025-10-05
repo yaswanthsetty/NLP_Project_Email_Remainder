@@ -221,6 +221,24 @@ On first execution, the system will:
 
 ## Testing
 
+### Notification Testing
+Before running the full system, verify that notifications work on your system:
+
+```bash
+# Test notification system
+python test_notifications.py
+```
+
+This will send multiple test notifications and provide troubleshooting tips if they don't appear.
+
+### Email Reminder Testing
+Test the email reminder functionality:
+
+```bash
+# Test email sending (requires SENDER_EMAIL and SENDER_APP_PASSWORD in .env)
+python test_email_reminder.py
+```
+
 ### Automated Testing
 ```bash
 # Run notification tests
@@ -231,17 +249,22 @@ python send_test_email.py
 ```
 
 ### Manual Testing
-1. **Send Test Email**:
+1. **Test Notifications**:
+   ```bash
+   python test_notifications.py
+   ```
+
+2. **Send Test Email**:
    ```bash
    python send_test_email.py
    ```
 
-2. **Run Detection**:
+3. **Run Detection**:
    ```bash
    python main.py --once
    ```
 
-3. **Expected Results**: The system should detect events such as:
+4. **Expected Results**: The system should detect events such as:
    - **Q3 Financial Report**: Due next Friday
    - **Client Presentation**: October 28th at 2 PM PST
    - **Team Standup**: Next Tuesday at 10 AM EST
@@ -249,6 +272,27 @@ python send_test_email.py
    - **Project Kickoff**: December 15th at 11 AM EST
    - **Code Review**: 25th of current month
    - **Training Session**: Next Monday at 9 AM EST
+
+### Troubleshooting Notifications
+
+If notifications don't appear on Windows 11:
+
+1. **Check Windows Settings**:
+   - Go to Settings > System > Notifications & actions
+   - Ensure "Get notifications from apps and other senders" is ON
+   - Look for "Smart Email Reminder" in the app list and enable it
+
+2. **Focus Assist**:
+   - Check if Focus Assist (Do Not Disturb) is turned OFF
+   - Go to Settings > System > Focus Assist
+
+3. **Run as Administrator**:
+   - Try running the script with administrator privileges
+
+4. **Restart System**:
+   - Restart your computer if notifications still don't appear
+
+The system includes multiple fallback mechanisms and will always show notifications in the console even if desktop notifications fail.
 
 ## Deployment
 
