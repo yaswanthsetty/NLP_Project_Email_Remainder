@@ -6,3 +6,5 @@ dateparser
 plyer
 python-dotenv
 schedule
+streamlit
+pandas

@@ -198,12 +198,36 @@ REMINDER_EMAIL=your_reminder_email@gmail.com
 
 ### Quick Start
 ```bash
-# Run complete system with continuous monitoring
-python main.py
+# Install dependencies
+pip install -r requirements.txt
 
-# Run single execution (recommended for cron jobs)
+# Download spaCy model
+python -m spacy download en_core_web_sm
+
+# Option 1: Launch Web Dashboard (Recommended)
+python launch_dashboard.py
+# OR
+streamlit run app.py
+
+# Option 2: Run Command-Line Version
 python main.py --once
 ```
+
+### Web Dashboard
+The Smart Email Reminder now includes a beautiful, modern web interface built with Streamlit:
+
+- **🎨 Modern UI**: Dark theme with elegant design
+- **📊 Real-time Analytics**: View statistics and event summaries  
+- **🔍 Interactive Scanning**: Configure scan parameters and view results instantly
+- **📅 Event Cards**: Beautiful cards showing events with urgency indicators
+- **🔒 Secure Authentication**: OAuth 2.0 integration with Google
+
+To access the web dashboard:
+```bash
+streamlit run app.py
+```
+
+The dashboard will open at `http://localhost:8501` in your browser.
 
 ### Command Line Options
 ```bash
