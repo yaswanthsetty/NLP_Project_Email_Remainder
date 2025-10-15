@@ -1,54 +1,39 @@
 #!/usr/bin/env python3
 """
-Smart Email Reminder Dashboard - Streamlit Web Application
+Smart Email Reminder Dashboard - Multi-Page Streamlit App
 
-A beautiful, modern web interface for the Smart Email Reminder System.
-Features dark theme, elegant UI, and real-time email scanning capabilities.
+A modern web interface with navigation-based pages instead of sidebar.
+Pages: Home -> Authenticate -> Scan -> Results
 
-Required packages:
-pip install streamlit google-api-python-client google-auth-httplib2 google-auth-oauthlib spacy dateparser plyer python-dotenv
-
-Usage:
-streamlit run app.py
+Author: Yaswanth Setty
 """
 
 import streamlit as st
-import pandas as pd
-import json
 import os
 import base64
-import pickle
+import time
 from datetime import datetime, timedelta
 from typing import List, Dict, Any, Optional
-import time
 
-# Core imports for email processing
+# Email and NLP imports
 import email
 import smtplib
 from email.message import EmailMessage
 from email.header import decode_header, make_header
+from dotenv import load_dotenv
 
 # Google API imports
-try:
-    from google.auth.transport.requests import Request
-    from google.oauth2.credentials import Credentials
-    from google_auth_oauthlib.flow import InstalledAppFlow
-    from googleapiclient.discovery import build
-    from googleapiclient.errors import HttpError
-except ImportError:
-    st.error("⚠️ Google API libraries not installed. Run: pip install google-api-python-client google-auth-httplib2 google-auth-oauthlib")
-    st.stop()
+from google.auth.transport.requests import Request
+from google.oauth2.credentials import Credentials
+from google_auth_oauthlib.flow import InstalledAppFlow
+from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
 
 # NLP imports
-try:
-    import spacy
-    import dateparser
-except ImportError:
-    st.error("⚠️ NLP libraries not installed. Run: pip install spacy dateparser")
-    st.stop()
+import spacy
+import dateparser
 
-# Load environment variables
-from dotenv import load_dotenv
+# Load environment
 load_dotenv()
 
 # =============================================================================
@@ -59,400 +44,384 @@ st.set_page_config(
     page_title="Smart Email Reminders",
     page_icon="📧",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="collapsed"
 )
 
 # =============================================================================
-# CUSTOM CSS STYLING
+# CUSTOM CSS
 # =============================================================================
 
 def load_css():
-    """Inject custom CSS for a stunning dark theme and modern aesthetics."""
+    """Modern dark theme with beautiful styling."""
     css = """
     <style>
-    /* Import modern fonts */
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
     
-    /* Root variables for consistent theming */
     :root {
-        --primary-color: #6C63FF;
-        --secondary-color: #4ECDC4;
-        --accent-color: #FF6B6B;
-        --background-dark: #0E1117;
-        --surface-dark: #1E2329;
+        --primary: #6C63FF;
+        --secondary: #4ECDC4;
+        --accent: #FF6B6B;
+        --success: #00C851;
+        --warning: #FFB347;
+        --dark-bg: #0E1117;
+        --surface: #1E2329;
         --surface-light: #262730;
-        --text-primary: #FAFAFA;
-        --text-secondary: #A0A0A0;
-        --success-color: #00C851;
-        --warning-color: #FFB347;
-        --border-radius: 12px;
-        --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        --shadow-hover: 0 8px 25px rgba(0, 0, 0, 0.2);
+        --text: #FAFAFA;
+        --text-dim: #A0A0A0;
     }
     
-    /* Overall app styling */
-    .main {
-        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    .main { font-family: 'Inter', sans-serif; }
+    
+    [data-testid="stSidebar"] { display: none; }
+    
+    /* Animations */
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
     }
     
-    /* Header styling */
-    .main-header {
+    @keyframes float {
+        0%, 100% { transform: translateY(0px); }
+        50% { transform: translateY(-10px); }
+    }
+    
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+    }
+    
+    .animate-in {
+        animation: fadeInUp 0.6s ease-out;
+    }
+    
+    .float {
+        animation: float 3s ease-in-out infinite;
+    }
+    
+    /* Feature Cards - Interactive */
+    .feature-card {
+        background: linear-gradient(135deg, rgba(108, 99, 255, 0.1), rgba(78, 205, 196, 0.05));
+        border-radius: 16px;
+        padding: 2rem;
+        margin: 1rem 0;
+        border: 2px solid transparent;
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        cursor: pointer;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .feature-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(108, 99, 255, 0.1), transparent);
+        transition: left 0.5s;
+    }
+    
+    .feature-card:hover::before {
+        left: 100%;
+    }
+    
+    .feature-card:hover {
+        transform: translateY(-8px) scale(1.02);
+        border-color: var(--primary);
+        box-shadow: 0 12px 24px rgba(108, 99, 255, 0.3);
+    }
+    
+    .feature-icon {
+        font-size: 3.5rem;
+        margin-bottom: 1rem;
+        display: inline-block;
+        transition: transform 0.3s ease;
+    }
+    
+    .feature-card:hover .feature-icon {
+        transform: scale(1.2) rotate(5deg);
+    }
+    
+    /* Demo Section */
+    .demo-box {
+        background: rgba(108, 99, 255, 0.05);
+        border: 1px solid rgba(108, 99, 255, 0.3);
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin: 1rem 0;
+        position: relative;
+    }
+    
+    .demo-box::after {
+        content: '✨ AI Powered';
+        position: absolute;
+        top: -12px;
+        right: 20px;
+        background: linear-gradient(135deg, var(--primary), var(--secondary));
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: white;
+    }
+    
+    /* Stats Counter */
+    .stat-counter {
+        background: linear-gradient(135deg, var(--surface), var(--surface-light));
+        border-radius: 12px;
+        padding: 1.5rem;
         text-align: center;
-        padding: 2rem 0;
-        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        border: 1px solid rgba(108, 99, 255, 0.2);
+        transition: all 0.3s ease;
+    }
+    
+    .stat-counter:hover {
+        transform: translateY(-5px);
+        border-color: var(--primary);
+        box-shadow: 0 8px 16px rgba(108, 99, 255, 0.2);
+    }
+    
+    .stat-number {
+        font-size: 3rem;
+        font-weight: 700;
+        background: linear-gradient(135deg, var(--primary), var(--secondary));
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         background-clip: text;
-        font-weight: 700;
-        font-size: 3rem;
-        margin-bottom: 1rem;
     }
     
-    .sub-header {
-        text-align: center;
-        color: var(--text-secondary);
+    /* CTA Button */
+    .cta-button {
+        background: linear-gradient(135deg, var(--primary), var(--secondary));
+        color: white;
+        padding: 1rem 3rem;
+        border-radius: 50px;
         font-size: 1.2rem;
-        font-weight: 400;
-        margin-bottom: 3rem;
+        font-weight: 600;
+        border: none;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(108, 99, 255, 0.4);
+        position: relative;
+        overflow: hidden;
     }
     
-    /* Event card styling */
+    .cta-button::before {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 0;
+        height: 0;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.3);
+        transform: translate(-50%, -50%);
+        transition: width 0.6s, height 0.6s;
+    }
+    
+    .cta-button:hover::before {
+        width: 300px;
+        height: 300px;
+    }
+    
+    .cta-button:hover {
+        transform: scale(1.05);
+        box-shadow: 0 6px 20px rgba(108, 99, 255, 0.6);
+    }
+    
+    /* Event Cards */
+    .card {
+        background: var(--surface);
+        border-radius: 12px;
+        padding: 2rem;
+        margin: 1rem 0;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        border-left: 4px solid var(--primary);
+    }
+    
     .event-card {
-        background: var(--surface-dark);
-        border-radius: var(--border-radius);
+        background: var(--surface);
+        border-radius: 12px;
         padding: 1.5rem;
-        margin-bottom: 1rem;
-        box-shadow: var(--shadow);
-        border-left: 4px solid var(--primary-color);
+        margin: 1rem 0;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         transition: all 0.3s ease;
         cursor: pointer;
     }
     
     .event-card:hover {
         transform: translateY(-2px);
-        box-shadow: var(--shadow-hover);
-        border-left-color: var(--secondary-color);
+        box-shadow: 0 8px 16px rgba(0,0,0,0.2);
     }
     
-    .event-title {
-        font-size: 1.1rem;
-        font-weight: 600;
-        color: var(--text-primary);
-        margin-bottom: 0.5rem;
-    }
+    .urgent { border-left: 4px solid var(--accent); }
+    .medium { border-left: 4px solid var(--warning); }
+    .low { border-left: 4px solid var(--success); }
     
-    .event-date {
-        font-size: 0.9rem;
-        color: var(--secondary-color);
-        font-weight: 500;
-        margin-bottom: 0.5rem;
-    }
-    
-    .event-source {
-        font-size: 0.8rem;
-        color: var(--text-secondary);
-        font-style: italic;
-    }
-    
-    .event-urgency-high {
-        border-left-color: var(--accent-color) !important;
-    }
-    
-    .event-urgency-medium {
-        border-left-color: var(--warning-color) !important;
-    }
-    
-    .event-urgency-low {
-        border-left-color: var(--success-color) !important;
-    }
-    
-    /* Sidebar styling */
-    .sidebar .sidebar-content {
-        background: var(--surface-dark);
-    }
-    
-    /* Button styling */
-    .stButton > button {
-        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-        color: white;
-        border: none;
-        border-radius: var(--border-radius);
-        padding: 0.75rem 1.5rem;
-        font-weight: 600;
-        transition: all 0.3s ease;
-        box-shadow: var(--shadow);
-    }
-    
-    .stButton > button:hover {
-        transform: translateY(-1px);
-        box-shadow: var(--shadow-hover);
-    }
-    
-    /* Success/Error message styling */
-    .stSuccess {
-        background: rgba(0, 200, 81, 0.1);
-        border-left: 4px solid var(--success-color);
-        border-radius: var(--border-radius);
-    }
-    
-    .stError {
-        background: rgba(255, 107, 107, 0.1);
-        border-left: 4px solid var(--accent-color);
-        border-radius: var(--border-radius);
-    }
-    
-    .stInfo {
-        background: rgba(108, 99, 255, 0.1);
-        border-left: 4px solid var(--primary-color);
-        border-radius: var(--border-radius);
-    }
-    
-    /* Statistics cards */
     .stat-card {
         background: var(--surface-light);
-        border-radius: var(--border-radius);
+        border-radius: 12px;
         padding: 1.5rem;
         text-align: center;
-        box-shadow: var(--shadow);
-        margin-bottom: 1rem;
-    }
-    
-    .stat-number {
-        font-size: 2rem;
-        font-weight: 700;
-        color: var(--primary-color);
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
     }
     
     .stat-label {
+        color: var(--text-dim);
         font-size: 0.9rem;
-        color: var(--text-secondary);
         margin-top: 0.5rem;
     }
     
-    /* Loading animation */
-    .loading-container {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        padding: 2rem;
+    /* Responsive Design */
+    @media (max-width: 768px) {
+        .feature-card {
+            padding: 1.5rem;
+        }
+        .feature-icon {
+            font-size: 2.5rem;
+        }
+        .stat-number {
+            font-size: 2rem;
+        }
+        .cta-button {
+            padding: 0.8rem 2rem;
+            font-size: 1rem;
+        }
     }
     
-    /* Hide Streamlit branding */
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
-    header {visibility: hidden;}
-    
+    #MainMenu, footer, header { visibility: hidden; }
     </style>
     """
     st.markdown(css, unsafe_allow_html=True)
 
 # =============================================================================
-# AUTHENTICATION MODULE
+# BACKEND FUNCTIONS
 # =============================================================================
 
 SCOPES = ['https://www.googleapis.com/auth/gmail.readonly']
 
 def get_gmail_service():
-    """
-    Authenticate and return Gmail service object using OAuth 2.0.
-    Returns the service object and user's email address.
-    """
+    """Authenticate with Gmail API."""
     creds = None
-    
-    # Check if token.json exists (previous authentication)
     if os.path.exists('token.json'):
         creds = Credentials.from_authorized_user_file('token.json', SCOPES)
     
-    # If there are no valid credentials, request authorization
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
             try:
                 creds.refresh(Request())
-            except Exception as e:
-                st.error(f"Failed to refresh credentials: {e}")
-                return None, None
+            except:
+                pass
         else:
             if not os.path.exists('credentials.json'):
-                st.error("❌ credentials.json not found. Please set up Gmail API credentials.")
                 return None, None
-                
-            try:
-                flow = InstalledAppFlow.from_client_secrets_file(
-                    'credentials.json', SCOPES)
-                creds = flow.run_local_server(port=0)
-            except Exception as e:
-                st.error(f"Authentication failed: {e}")
-                return None, None
+            flow = InstalledAppFlow.from_client_secrets_file('credentials.json', SCOPES)
+            creds = flow.run_local_server(port=0)
         
-        # Save credentials for next run
         with open('token.json', 'w') as token:
             token.write(creds.to_json())
     
     try:
         service = build('gmail', 'v1', credentials=creds)
-        
-        # Get user's email address
         profile = service.users().getProfile(userId='me').execute()
         user_email = profile.get('emailAddress', 'Unknown')
-        
         return service, user_email
-    except Exception as e:
-        st.error(f"Failed to build Gmail service: {e}")
+    except:
         return None, None
 
-# =============================================================================
-# EMAIL FETCHING MODULE
-# =============================================================================
-
-def search_emails(service, query: str = "is:unread newer_than:7d", max_results: int = 50):
-    """
-    Search for emails using Gmail API with specified query.
-    """
+def search_emails(service, query: str, max_results: int = 50):
+    """Search Gmail for emails."""
     try:
-        result = service.users().messages().list(
-            userId='me', 
-            q=query,
-            maxResults=max_results
-        ).execute()
-        
-        messages = result.get('messages', [])
-        return messages
-        
-    except HttpError as error:
-        st.error(f"An error occurred while searching emails: {error}")
+        result = service.users().messages().list(userId='me', q=query, maxResults=max_results).execute()
+        return result.get('messages', [])
+    except:
         return []
 
 def get_raw_email(service, message_id: str):
-    """
-    Retrieve raw email content by message ID.
-    """
+    """Get raw email content."""
     try:
-        message = service.users().messages().get(
-            userId='me', 
-            id=message_id, 
-            format='raw'
-        ).execute()
-        
-        raw_email = base64.urlsafe_b64decode(
-            message['raw'].encode('ASCII')
-        )
-        
-        return raw_email
-        
-    except HttpError as error:
-        st.error(f"An error occurred while fetching email {message_id}: {error}")
+        message = service.users().messages().get(userId='me', id=message_id, format='raw').execute()
+        return base64.urlsafe_b64decode(message['raw'].encode('ASCII'))
+    except:
         return None
 
-# =============================================================================
-# EMAIL PARSING MODULE
-# =============================================================================
-
-def decode_email_header(header_string):
-    """Handle potentially encoded email headers."""
-    if not header_string:
-        return ""
-    
-    try:
-        decoded_parts = decode_header(header_string)
-        decoded_header = make_header(decoded_parts)
-        return str(decoded_header)
-    except Exception as e:
-        return str(header_string)
-
-def get_email_body(email_message):
-    """Extract clean plain text from email body."""
-    if email_message.is_multipart():
-        for part in email_message.walk():
-            if part.get_content_type() == "text/plain":
-                try:
-                    payload = part.get_payload(decode=True)
-                    if payload:
-                        charset = part.get_content_charset() or 'utf-8'
-                        return payload.decode(charset, errors='ignore')
-                except Exception:
-                    continue
-    else:
-        try:
-            payload = email_message.get_payload(decode=True)
-            if payload:
-                charset = email_message.get_content_charset() or 'utf-8'
-                return payload.decode(charset, errors='ignore')
-        except Exception:
-            pass
-    
-    return ""
-
 def parse_raw_email(raw_email_bytes):
-    """Parse raw email bytes into structured data."""
+    """Parse email to structured data."""
     if not raw_email_bytes:
         return {'subject': '', 'from': '', 'to': '', 'body': ''}
     
     try:
         email_message = email.message_from_bytes(raw_email_bytes)
         
-        subject = decode_email_header(email_message.get('Subject', ''))
-        from_address = decode_email_header(email_message.get('From', ''))
-        to_address = decode_email_header(email_message.get('To', ''))
-        body = get_email_body(email_message)
+        subject = str(make_header(decode_header(email_message.get('Subject', ''))))
+        from_addr = str(make_header(decode_header(email_message.get('From', ''))))
+        to_addr = str(make_header(decode_header(email_message.get('To', ''))))
         
-        return {
-            'subject': subject,
-            'from': from_address,
-            'to': to_address,
-            'body': body
-        }
-    except Exception as e:
-        st.error(f"Error parsing email: {e}")
+        body = ""
+        if email_message.is_multipart():
+            for part in email_message.walk():
+                if part.get_content_type() == "text/plain":
+                    payload = part.get_payload(decode=True)
+                    if payload:
+                        if isinstance(payload, bytes):
+                            body = payload.decode(part.get_content_charset() or 'utf-8', errors='ignore')
+                        elif isinstance(payload, str):
+                            body = payload
+                        else:
+                            body = str(payload)
+                        break
+        else:
+            payload = email_message.get_payload(decode=True)
+            if payload:
+                if isinstance(payload, bytes):
+                    body = payload.decode(email_message.get_content_charset() or 'utf-8', errors='ignore')
+                elif isinstance(payload, str):
+                    body = payload
+                else:
+                    body = str(payload)
+        
+        return {'subject': subject, 'from': from_addr, 'to': to_addr, 'body': body}
+    except:
         return {'subject': '', 'from': '', 'to': '', 'body': ''}
 
-# =============================================================================
-# INTELLIGENCE MODULE
-# =============================================================================
-
-def load_nlp_model():
-    """Load spaCy model with error handling."""
-    try:
-        nlp = spacy.load("en_core_web_sm")
-        return nlp
-    except OSError:
-        st.error("❌ spaCy model 'en_core_web_sm' not found. Please install it:")
-        st.code("python -m spacy download en_core_web_sm")
-        return None
-
 def find_actionable_events(text: str) -> List[Dict[str, Any]]:
-    """Analyze email text to identify actionable events."""
+    """Use NLP to find events in text."""
     if not text or not text.strip():
         return []
     
-    nlp = load_nlp_model()
-    if not nlp:
+    try:
+        nlp = spacy.load("en_core_web_sm")
+    except:
         return []
     
     try:
         doc = nlp(text)
         events = []
         
-        # Look for date entities and surrounding context
         for ent in doc.ents:
             if ent.label_ in ["DATE", "TIME", "EVENT"]:
-                # Get surrounding context (10 words before and after)
                 start = max(0, ent.start - 10)
                 end = min(len(doc), ent.end + 10)
                 context = doc[start:end].text
                 
-                # Try to parse the date
                 parsed_date = dateparser.parse(ent.text)
                 
                 if parsed_date:
-                    # Determine urgency based on time until event
                     days_until = (parsed_date - datetime.now()).days
                     
                     if days_until < 0:
                         urgency = "overdue"
-                        urgency_color = "high"
+                        urgency_color = "urgent"
                     elif days_until <= 1:
                         urgency = "urgent"
-                        urgency_color = "high"
+                        urgency_color = "urgent"
                     elif days_until <= 7:
                         urgency = "soon"
                         urgency_color = "medium"
@@ -470,285 +439,642 @@ def find_actionable_events(text: str) -> List[Dict[str, Any]]:
                         'formatted_date': parsed_date.strftime('%A, %B %d, %Y at %I:%M %p')
                     })
         
-        # Sort events by date
         events.sort(key=lambda x: x['parsed_date'])
         return events
-        
-    except Exception as e:
-        st.error(f"Error in NLP processing: {e}")
+    except:
         return []
 
-# =============================================================================
-# UTILITY FUNCTIONS
-# =============================================================================
-
-def get_urgency_emoji(urgency_color: str) -> str:
-    """Get emoji based on urgency level."""
-    emoji_map = {
-        "high": "🚨",
-        "medium": "⚠️",
-        "low": "📅"
-    }
-    return emoji_map.get(urgency_color, "📅")
-
-def format_time_until(days_until: int) -> str:
-    """Format time until event in human-readable form."""
-    if days_until < 0:
-        return f"{abs(days_until)} days overdue"
-    elif days_until == 0:
-        return "Today"
-    elif days_until == 1:
-        return "Tomorrow"
-    else:
-        return f"In {days_until} days"
-
-# =============================================================================
-# MAIN APPLICATION
-# =============================================================================
-
-def main():
-    """Main Streamlit application."""
+def send_email_notification(events: List[Dict], user_email: str):
+    """Send email notification with important events."""
+    sender_email = os.getenv("SENDER_EMAIL")
+    sender_password = os.getenv("SENDER_APP_PASSWORD")
     
-    # Load custom CSS
-    load_css()
+    if not sender_email or not sender_password or not events:
+        return False
     
-    # Initialize session state
-    if 'authenticated' not in st.session_state:
-        st.session_state.authenticated = False
-    if 'service' not in st.session_state:
-        st.session_state.service = None
-    if 'user_email' not in st.session_state:
-        st.session_state.user_email = None
-    if 'events' not in st.session_state:
-        st.session_state.events = []
-    if 'last_scan' not in st.session_state:
-        st.session_state.last_scan = None
+    urgent_events = [e for e in events if e['urgency_color'] in ['urgent', 'medium']]
     
-    # Main header
-    st.markdown('<h1 class="main-header">📧 Smart Email Reminder Dashboard</h1>', unsafe_allow_html=True)
-    st.markdown('<p class="sub-header">Automatically find deadlines and events hiding in your inbox</p>', unsafe_allow_html=True)
+    if not urgent_events:
+        return False
     
-    # Sidebar for controls
-    with st.sidebar:
-        st.markdown('<h2>⚙️ Settings</h2>', unsafe_allow_html=True)
+    subject = f"🚨 {len(urgent_events)} Important Reminder(s) from Your Inbox"
+    
+    body = f"""
+Smart Email Reminder - Important Events Detected
+================================================
+
+Hello,
+
+We found {len(urgent_events)} important event(s) in your recent emails that need your attention:
+
+"""
+    
+    for i, event in enumerate(urgent_events, 1):
+        urgency_emoji = "🚨" if event['urgency_color'] == 'urgent' else "⚠️"
+        body += f"""
+{i}. {urgency_emoji} {event['context'][:100]}
+   📅 Date: {event['formatted_date']}
+   ⏰ Status: {event['urgency']} ({event['days_until']} days)
+   📧 Source: {event.get('email_subject', 'N/A')}
+   
+"""
+    
+    body += f"""
+================================================
+Total Events Found: {len(events)}
+Urgent/Important: {len(urgent_events)}
+Scan Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+
+This is an automated reminder from Smart Email Reminder System.
+"""
+    
+    try:
+        msg = EmailMessage()
+        msg['From'] = sender_email
+        msg['To'] = user_email
+        msg['Subject'] = subject
+        msg.set_content(body)
         
-        # Authentication section
+        with smtplib.SMTP("smtp.gmail.com", 587) as server:
+            server.starttls()
+            server.login(sender_email, sender_password)
+            server.send_message(msg)
+        
+        return True
+    except:
+        return False
+
+# =============================================================================
+# SESSION STATE INITIALIZATION
+# =============================================================================
+
+if 'page' not in st.session_state:
+    st.session_state.page = 'home'
+if 'authenticated' not in st.session_state:
+    st.session_state.authenticated = False
+if 'service' not in st.session_state:
+    st.session_state.service = None
+if 'user_email' not in st.session_state:
+    st.session_state.user_email = None
+if 'events' not in st.session_state:
+    st.session_state.events = []
+if 'scan_complete' not in st.session_state:
+    st.session_state.scan_complete = False
+
+# =============================================================================
+# PAGE: HOME
+# =============================================================================
+
+def show_home_page():
+    """Landing page with navigation."""
+    # Hero Section
+    st.markdown("""
+    <div style="text-align: center; padding: 3rem 0 2rem 0;" class="animate-in">
+        <div style="font-size: 5rem; margin-bottom: 1rem;" class="float">📧</div>
+        <h1 style="font-size: 3.5rem; margin: 0; background: linear-gradient(135deg, #6C63FF, #4ECDC4); 
+                   -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: 800;">
+            Smart Email Reminder
+        </h1>
+        <p style="font-size: 1.4rem; color: #A0A0A0; margin-top: 1.5rem; max-width: 700px; margin-left: auto; margin-right: auto; line-height: 1.6;">
+            Never miss important deadlines hiding in your emails. Let AI find them for you.
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Quick Stats
+    st.markdown("<br>", unsafe_allow_html=True)
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        st.markdown("""
+        <div class="stat-counter">
+            <div class="stat-number">AI</div>
+            <div class="stat-label">Powered NLP</div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col2:
+        st.markdown("""
+        <div class="stat-counter">
+            <div class="stat-number">3s</div>
+            <div class="stat-label">Average Scan</div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col3:
+        st.markdown("""
+        <div class="stat-counter">
+            <div class="stat-number">100%</div>
+            <div class="stat-label">Secure OAuth</div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col4:
+        st.markdown("""
+        <div class="stat-counter">
+            <div class="stat-number">24/7</div>
+            <div class="stat-label">Always Ready</div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    st.markdown("<br><br>", unsafe_allow_html=True)
+    
+    # Live Demo Section
+    st.markdown("""
+    <div style="text-align: center; margin: 3rem 0 2rem 0;">
+        <h2 style="font-size: 2rem; color: #FAFAFA; margin-bottom: 1rem;">
+            See What We Can Detect 🎯
+        </h2>
+        <p style="color: #A0A0A0; font-size: 1.1rem;">
+            Our AI understands natural language and finds important dates automatically
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown("""
+        <div class="demo-box">
+            <div style="color: #4ECDC4; font-weight: 600; margin-bottom: 0.5rem;">📧 Email Example</div>
+            <div style="color: #A0A0A0; font-style: italic; line-height: 1.8;">
+                "Hi team, don't forget the <strong style="color: #FFB347;">project deadline next Friday at 3 PM</strong>. 
+                Also, the <strong style="color: #FFB347;">client meeting is scheduled for October 20th</strong>."
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col2:
+        st.markdown("""
+        <div class="demo-box">
+            <div style="color: #00C851; font-weight: 600; margin-bottom: 0.5rem;">✅ AI Detection</div>
+            <div style="line-height: 2;">
+                <div style="color: #FF6B6B;">🚨 <strong>Urgent:</strong> Project deadline (5 days)</div>
+                <div style="color: #FFB347;">⚠️ <strong>Soon:</strong> Client meeting (5 days)</div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    st.markdown("<br><br>", unsafe_allow_html=True)
+    
+    # Interactive Feature Cards
+    st.markdown("""
+    <div style="text-align: center; margin: 2rem 0;">
+        <h2 style="font-size: 2rem; color: #FAFAFA;">Powerful Features ⚡</h2>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown("""
+        <div class="feature-card">
+            <div class="feature-icon">🤖</div>
+            <h3 style="color: #FAFAFA; margin-bottom: 0.5rem;">AI-Powered Detection</h3>
+            <p style="color: #A0A0A0; line-height: 1.6;">
+                Advanced NLP using spaCy to automatically detect dates, times, and events in natural language
+            </p>
+            <div style="margin-top: 1rem; color: #4ECDC4; font-size: 0.9rem; font-weight: 600;">
+                ✓ Named Entity Recognition<br/>
+                ✓ Context-Aware Parsing<br/>
+                ✓ Multi-Format Support
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        st.markdown("""
+        <div class="feature-card">
+            <div class="feature-icon">📧</div>
+            <h3 style="color: #FAFAFA; margin-bottom: 0.5rem;">Smart Email Alerts</h3>
+            <p style="color: #A0A0A0; line-height: 1.6;">
+                Get automatic email notifications for urgent and important events found in your inbox
+            </p>
+            <div style="margin-top: 1rem; color: #4ECDC4; font-size: 0.9rem; font-weight: 600;">
+                ✓ Priority-Based Filtering<br/>
+                ✓ Customizable Notifications<br/>
+                ✓ Beautiful Email Format
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col2:
+        st.markdown("""
+        <div class="feature-card">
+            <div class="feature-icon">📅</div>
+            <h3 style="color: #FAFAFA; margin-bottom: 0.5rem;">Smart Date Parsing</h3>
+            <p style="color: #A0A0A0; line-height: 1.6;">
+                Understands phrases like "next Friday", "in 3 days", "October 20th" and converts them automatically
+            </p>
+            <div style="margin-top: 1rem; color: #4ECDC4; font-size: 0.9rem; font-weight: 600;">
+                ✓ Natural Language Processing<br/>
+                ✓ Relative Date Understanding<br/>
+                ✓ Time Zone Aware
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        st.markdown("""
+        <div class="feature-card">
+            <div class="feature-icon">🔒</div>
+            <h3 style="color: #FAFAFA; margin-bottom: 0.5rem;">Bank-Level Security</h3>
+            <p style="color: #A0A0A0; line-height: 1.6;">
+                Your data is protected with OAuth 2.0. We never store your emails or credentials
+            </p>
+            <div style="margin-top: 1rem; color: #4ECDC4; font-size: 0.9rem; font-weight: 600;">
+                ✓ OAuth 2.0 Authentication<br/>
+                ✓ Zero Data Storage<br/>
+                ✓ Read-Only Access
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    st.markdown("<br><br>", unsafe_allow_html=True)
+    
+    # How It Works
+    st.markdown("""
+    <div style="text-align: center; margin: 3rem 0 2rem 0;">
+        <h2 style="font-size: 2rem; color: #FAFAFA;">How It Works 🔄</h2>
+        <p style="color: #A0A0A0; font-size: 1.1rem;">Get started in just 3 simple steps</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        st.markdown("""
+        <div style="text-align: center; padding: 2rem; background: rgba(108, 99, 255, 0.05); border-radius: 12px; border: 2px solid rgba(108, 99, 255, 0.2);">
+            <div style="font-size: 3rem; margin-bottom: 1rem;">�</div>
+            <h3 style="color: #6C63FF; margin-bottom: 0.5rem;">1. Connect</h3>
+            <p style="color: #A0A0A0; font-size: 0.95rem;">
+                Securely authenticate with your Gmail account using OAuth 2.0
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col2:
+        st.markdown("""
+        <div style="text-align: center; padding: 2rem; background: rgba(78, 205, 196, 0.05); border-radius: 12px; border: 2px solid rgba(78, 205, 196, 0.2);">
+            <div style="font-size: 3rem; margin-bottom: 1rem;">🔍</div>
+            <h3 style="color: #4ECDC4; margin-bottom: 0.5rem;">2. Scan</h3>
+            <p style="color: #A0A0A0; font-size: 0.95rem;">
+                AI analyzes your emails and detects important dates and events
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col3:
+        st.markdown("""
+        <div style="text-align: center; padding: 2rem; background: rgba(0, 200, 81, 0.05); border-radius: 12px; border: 2px solid rgba(0, 200, 81, 0.2);">
+            <div style="font-size: 3rem; margin-bottom: 1rem;">�</div>
+            <h3 style="color: #00C851; margin-bottom: 0.5rem;">3. Organize</h3>
+            <p style="color: #A0A0A0; font-size: 0.95rem;">
+                View all deadlines organized by priority and urgency
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    st.markdown("<br><br><br>", unsafe_allow_html=True)
+    
+    # Call to Action
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        st.markdown("""
+        <div style="text-align: center; background: linear-gradient(135deg, rgba(108, 99, 255, 0.1), rgba(78, 205, 196, 0.1)); 
+                    padding: 3rem 2rem; border-radius: 20px; border: 2px solid rgba(108, 99, 255, 0.3);">
+            <h2 style="font-size: 2.2rem; color: #FAFAFA; margin-bottom: 1rem;">
+                Ready to Never Miss a Deadline?
+            </h2>
+            <p style="color: #A0A0A0; font-size: 1.1rem; margin-bottom: 2rem;">
+                Join hundreds of professionals staying organized with AI-powered email analysis
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        st.markdown("<br>", unsafe_allow_html=True)
+        
+        if st.button("🚀 Get Started Free", type="primary", use_container_width=True, key="cta_main"):
+            st.session_state.page = 'authenticate'
+            st.rerun()
+        
+        st.markdown("""
+        <div style="text-align: center; margin-top: 1.5rem; color: #A0A0A0; font-size: 0.9rem;">
+            <p>✓ No credit card required  •  ✓ Free forever  •  ✓ 100% secure</p>
+        </div>
+        """, unsafe_allow_html=True)
+
+# =============================================================================
+# PAGE: AUTHENTICATE
+# =============================================================================
+
+def show_authenticate_page():
+    """Authentication page."""
+    st.markdown("""
+    <div style="text-align: center; padding: 2rem 0;">
+        <div style="font-size: 4rem; margin-bottom: 1rem;">🔐</div>
+        <h1>Connect Your Gmail</h1>
+        <p style="font-size: 1.1rem; color: #A0A0A0;">
+            Securely authenticate with Google to scan your emails
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    st.markdown("<br>", unsafe_allow_html=True)
+    
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
         if not st.session_state.authenticated:
-            st.markdown("### 🔐 Authentication")
-            st.info("Connect your Gmail account to start scanning for reminders.")
+            st.info("🔒 We use OAuth 2.0 for secure authentication. Your credentials are never stored.")
             
-            if st.button("🔑 Authenticate with Google", type="primary"):
-                with st.spinner("Authenticating with Google..."):
+            st.markdown("<br>", unsafe_allow_html=True)
+            
+            if st.button("🔑 Authenticate with Google", type="primary", use_container_width=True):
+                with st.spinner("🔐 Connecting to Google..."):
                     service, user_email = get_gmail_service()
                     
                     if service and user_email:
                         st.session_state.service = service
                         st.session_state.user_email = user_email
                         st.session_state.authenticated = True
-                        st.success(f"✅ Successfully authenticated!")
+                        st.success(f"✅ Successfully authenticated as {user_email}")
+                        time.sleep(1)
+                        st.session_state.page = 'scan'
                         st.rerun()
                     else:
-                        st.error("❌ Authentication failed. Please try again.")
-        
+                        st.error("❌ Authentication failed. Please check your credentials.json file.")
         else:
-            # Authenticated state
-            st.success(f"✅ Authenticated as: {st.session_state.user_email}")
-            
-            # Scan controls
-            st.markdown("### 📊 Scan Settings")
-            
-            scan_days = st.selectbox(
-                "📅 Scan emails from last:",
-                [1, 3, 7, 14, 30],
-                index=2,
-                format_func=lambda x: f"{x} day{'s' if x > 1 else ''}"
-            )
-            
-            max_emails = st.slider(
-                "📧 Maximum emails to scan:",
-                min_value=10,
-                max_value=100,
-                value=50,
-                step=10
-            )
-            
-            # Scan button
-            if st.button("🔍 Scan Inbox for Reminders", type="primary"):
-                with st.spinner("🔍 Scanning your inbox... This may take a moment."):
-                    # Progress bar
-                    progress_bar = st.progress(0)
-                    
-                    # Search for emails
-                    query = f"newer_than:{scan_days}d"
-                    messages = search_emails(st.session_state.service, query, max_emails)
-                    progress_bar.progress(25)
-                    
-                    if not messages:
-                        st.info(f"📭 No emails found in the last {scan_days} days.")
-                        st.session_state.events = []
-                    else:
-                        all_events = []
-                        total_messages = len(messages)
-                        
-                        # Process each email
-                        for i, message in enumerate(messages):
-                            try:
-                                raw_email = get_raw_email(st.session_state.service, message['id'])
-                                if raw_email:
-                                    parsed_email = parse_raw_email(raw_email)
-                                    
-                                    # Combine subject and body for analysis
-                                    full_text = f"{parsed_email.get('subject', '')} {parsed_email.get('body', '')}"
-                                    events = find_actionable_events(full_text)
-                                    
-                                    # Add source information to events
-                                    for event in events:
-                                        event['email_subject'] = parsed_email.get('subject', 'No Subject')
-                                        event['email_from'] = parsed_email.get('from', 'Unknown Sender')
-                                    
-                                    all_events.extend(events)
-                                
-                                # Update progress
-                                progress = 25 + (i + 1) / total_messages * 75
-                                progress_bar.progress(int(progress))
-                                
-                            except Exception as e:
-                                st.warning(f"⚠️ Error processing email: {e}")
-                                continue
-                        
-                        # Remove duplicates and sort by urgency and date
-                        unique_events = []
-                        seen = set()
-                        
-                        for event in all_events:
-                            event_key = (event['original_text'], event['parsed_date'].date())
-                            if event_key not in seen:
-                                seen.add(event_key)
-                                unique_events.append(event)
-                        
-                        # Sort by urgency (high first) then by date
-                        urgency_order = {"high": 0, "medium": 1, "low": 2}
-                        unique_events.sort(key=lambda x: (urgency_order.get(x['urgency_color'], 3), x['parsed_date']))
-                        
-                        st.session_state.events = unique_events
-                        st.session_state.last_scan = datetime.now()
-                        
-                    progress_bar.progress(100)
-                    time.sleep(0.5)  # Brief pause to show completion
-                    st.rerun()
-            
-            # Last scan info
-            if st.session_state.last_scan:
-                st.markdown("---")
-                st.caption(f"🕒 Last scan: {st.session_state.last_scan.strftime('%Y-%m-%d %H:%M:%S')}")
-            
-            # Logout button
-            st.markdown("---")
-            if st.button("🚪 Logout"):
-                # Clear session state
-                for key in list(st.session_state.keys()):
-                    del st.session_state[key]
+            st.success(f"✅ Already authenticated as {st.session_state.user_email}")
+            st.markdown("<br>", unsafe_allow_html=True)
+            if st.button("Continue to Scan →", type="primary", use_container_width=True):
+                st.session_state.page = 'scan'
                 st.rerun()
+        
+        st.markdown("<br>", unsafe_allow_html=True)
+        if st.button("← Back to Home"):
+            st.session_state.page = 'home'
+            st.rerun()
+
+# =============================================================================
+# PAGE: SCAN
+# =============================================================================
+
+def show_scan_page():
+    """Email scanning configuration and execution page."""
+    if not st.session_state.authenticated:
+        st.warning("⚠️ Please authenticate first")
+        if st.button("Go to Authentication"):
+            st.session_state.page = 'authenticate'
+            st.rerun()
+        return
     
-    # Main content area
-    if st.session_state.authenticated and st.session_state.events:
-        # Statistics
-        col1, col2, col3, col4 = st.columns(4)
+    st.markdown("""
+    <div style="text-align: center; padding: 2rem 0;">
+        <div style="font-size: 4rem; margin-bottom: 1rem;">🔍</div>
+        <h1>Scan Your Inbox</h1>
+        <p style="font-size: 1.1rem; color: #A0A0A0;">
+            Configure scan settings and analyze your emails
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    st.markdown("<br>", unsafe_allow_html=True)
+    
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        st.markdown(f"""
+        <div class="card">
+            <p style="text-align: center; color: #00C851;">
+                ✅ Authenticated as <strong>{st.session_state.user_email}</strong>
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
         
-        with col1:
-            st.markdown(f'''
-                <div class="stat-card">
-                    <div class="stat-number">{len(st.session_state.events)}</div>
-                    <div class="stat-label">Total Events</div>
-                </div>
-            ''', unsafe_allow_html=True)
+        st.markdown("<br>", unsafe_allow_html=True)
         
-        with col2:
-            urgent_count = len([e for e in st.session_state.events if e['urgency_color'] == 'high'])
-            st.markdown(f'''
-                <div class="stat-card">
-                    <div class="stat-number" style="color: var(--accent-color);">{urgent_count}</div>
-                    <div class="stat-label">Urgent</div>
-                </div>
-            ''', unsafe_allow_html=True)
+        st.markdown("### ⚙️ Scan Configuration")
         
-        with col3:
-            upcoming_count = len([e for e in st.session_state.events if e['days_until'] >= 0])
-            st.markdown(f'''
-                <div class="stat-card">
-                    <div class="stat-number" style="color: var(--success-color);">{upcoming_count}</div>
-                    <div class="stat-label">Upcoming</div>
-                </div>
-            ''', unsafe_allow_html=True)
+        scan_days = st.selectbox(
+            "📅 Time Range",
+            [1, 3, 7, 14, 30],
+            index=2,
+            format_func=lambda x: f"Last {x} day{'s' if x > 1 else ''}"
+        )
         
-        with col4:
-            overdue_count = len([e for e in st.session_state.events if e['days_until'] < 0])
-            st.markdown(f'''
-                <div class="stat-card">
-                    <div class="stat-number" style="color: var(--warning-color);">{overdue_count}</div>
-                    <div class="stat-label">Overdue</div>
-                </div>
-            ''', unsafe_allow_html=True)
+        max_emails = st.slider(
+            "📧 Maximum Emails to Scan",
+            min_value=10,
+            max_value=100,
+            value=50,
+            step=10
+        )
         
-        st.markdown("---")
+        send_email = st.checkbox(
+            "📧 Send email notification for urgent items",
+            value=True,
+            help="You'll receive an email with urgent/important events"
+        )
         
-        # Events display
-        st.markdown("## 📅 Your Upcoming Events & Deadlines")
+        st.markdown("<br>", unsafe_allow_html=True)
         
-        if st.session_state.events:
-            # Create responsive grid
-            cols = st.columns(2)
-            
-            for i, event in enumerate(st.session_state.events):
-                with cols[i % 2]:
-                    urgency_emoji = get_urgency_emoji(event['urgency_color'])
-                    time_until = format_time_until(event['days_until'])
+        if st.button("🔍 Start Scanning", type="primary", use_container_width=True):
+            with st.spinner("🔍 Analyzing your emails..."):
+                progress_bar = st.progress(0)
+                status = st.empty()
+                
+                status.text("Searching for emails...")
+                query = f"newer_than:{scan_days}d"
+                messages = search_emails(st.session_state.service, query, max_emails)
+                progress_bar.progress(20)
+                
+                if not messages:
+                    st.info(f"📭 No emails found in the last {scan_days} days.")
+                    st.session_state.events = []
+                else:
+                    all_events = []
+                    total = len(messages)
                     
-                    st.markdown(f'''
-                        <div class="event-card event-urgency-{event['urgency_color']}">
-                            <div class="event-title">
-                                {urgency_emoji} {event['context'][:100]}{'...' if len(event['context']) > 100 else ''}
-                            </div>
-                            <div class="event-date">
-                                🗓️ {event['formatted_date']} ({time_until})
-                            </div>
-                            <div class="event-source">
-                                ✉️ From: {event['email_subject'][:50]}{'...' if len(event['email_subject']) > 50 else ''}
-                            </div>
-                        </div>
-                    ''', unsafe_allow_html=True)
+                    status.text(f"Processing {total} emails...")
+                    
+                    for i, msg in enumerate(messages):
+                        raw_email = get_raw_email(st.session_state.service, msg['id'])
+                        if raw_email:
+                            parsed = parse_raw_email(raw_email)
+                            full_text = f"{parsed.get('subject', '')} {parsed.get('body', '')}"
+                            events = find_actionable_events(full_text)
+                            
+                            for event in events:
+                                event['email_subject'] = parsed.get('subject', 'No Subject')
+                                event['email_from'] = parsed.get('from', 'Unknown')
+                            
+                            all_events.extend(events)
+                        
+                        progress_bar.progress(20 + int((i + 1) / total * 60))
+                    
+                    unique_events = []
+                    seen = set()
+                    for event in all_events:
+                        key = (event['original_text'], event['parsed_date'].date())
+                        if key not in seen:
+                            seen.add(key)
+                            unique_events.append(event)
+                    
+                    urgency_order = {"urgent": 0, "medium": 1, "low": 2}
+                    unique_events.sort(key=lambda x: (urgency_order.get(x['urgency_color'], 3), x['parsed_date']))
+                    
+                    st.session_state.events = unique_events
+                    st.session_state.scan_complete = True
+                    
+                    if send_email and unique_events:
+                        status.text("Sending email notification...")
+                        if send_email_notification(unique_events, st.session_state.user_email):
+                            st.success("✅ Email notification sent!")
+                        progress_bar.progress(90)
+                    
+                    status.text("✅ Scan complete!")
+                    progress_bar.progress(100)
+                    time.sleep(1)
+                    st.session_state.page = 'results'
+                    st.rerun()
         
-        else:
-            st.info("📭 No upcoming events or deadlines found in your recent emails.")
+        st.markdown("<br>", unsafe_allow_html=True)
+        if st.button("← Back"):
+            st.session_state.page = 'home'
+            st.rerun()
+
+# =============================================================================
+# PAGE: RESULTS
+# =============================================================================
+
+def show_results_page():
+    """Display scan results."""
+    if not st.session_state.scan_complete:
+        st.warning("⚠️ No scan results available")
+        if st.button("Go to Scan"):
+            st.session_state.page = 'scan'
+            st.rerun()
+        return
     
-    elif st.session_state.authenticated:
-        # Authenticated but no scan yet
-        st.markdown("""
-        <div style="text-align: center; padding: 3rem 0;">
-            <h3>🎯 Ready to Scan Your Inbox!</h3>
-            <p style="color: var(--text-secondary); font-size: 1.1rem;">
-                Click "Scan Inbox for Reminders" in the sidebar to find important events and deadlines in your emails.
-            </p>
+    st.markdown("""
+    <div style="text-align: center; padding: 2rem 0;">
+        <h1>📊 Your Events & Deadlines</h1>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    events = st.session_state.events
+    
+    if not events:
+        st.info("📭 No events or deadlines found in your recent emails.")
+        if st.button("Scan Again"):
+            st.session_state.page = 'scan'
+            st.rerun()
+        return
+    
+    col1, col2, col3, col4 = st.columns(4)
+    
+    urgent_count = len([e for e in events if e['urgency_color'] == 'urgent'])
+    medium_count = len([e for e in events if e['urgency_color'] == 'medium'])
+    upcoming_count = len([e for e in events if e['days_until'] >= 0])
+    overdue_count = len([e for e in events if e['days_until'] < 0])
+    
+    with col1:
+        st.markdown(f"""
+        <div class="stat-card">
+            <div class="stat-number">{len(events)}</div>
+            <div class="stat-label">Total Events</div>
         </div>
         """, unsafe_allow_html=True)
     
+    with col2:
+        st.markdown(f"""
+        <div class="stat-card">
+            <div class="stat-number" style="color: #FF6B6B;">{urgent_count}</div>
+            <div class="stat-label">Urgent</div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col3:
+        st.markdown(f"""
+        <div class="stat-card">
+            <div class="stat-number" style="color: #FFB347;">{medium_count}</div>
+            <div class="stat-label">Coming Soon</div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col4:
+        st.markdown(f"""
+        <div class="stat-card">
+            <div class="stat-number" style="color: #00C851;">{upcoming_count}</div>
+            <div class="stat-label">Upcoming</div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    st.markdown("<br>", unsafe_allow_html=True)
+    
+    st.markdown("### 📅 All Events")
+    
+    cols = st.columns(2)
+    
+    for i, event in enumerate(events):
+        with cols[i % 2]:
+            urgency_emoji = {"urgent": "🚨", "medium": "⚠️", "low": "📅"}
+            emoji = urgency_emoji.get(event['urgency_color'], "📅")
+            
+            time_until = f"{abs(event['days_until'])} days overdue" if event['days_until'] < 0 else \
+                        "Today" if event['days_until'] == 0 else \
+                        "Tomorrow" if event['days_until'] == 1 else \
+                        f"In {event['days_until']} days"
+            
+            st.markdown(f"""
+            <div class="event-card {event['urgency_color']}">
+                <div style="font-size: 1.1rem; font-weight: 600; margin-bottom: 0.5rem;">
+                    {emoji} {event['context'][:80]}{'...' if len(event['context']) > 80 else ''}
+                </div>
+                <div style="color: #4ECDC4; margin-bottom: 0.5rem;">
+                    🗓️ {event['formatted_date']} ({time_until})
+                </div>
+                <div style="color: #A0A0A0; font-size: 0.9rem;">
+                    ✉️ {event.get('email_subject', 'N/A')[:60]}{'...' if len(event.get('email_subject', '')) > 60 else ''}
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+    
+    st.markdown("<br>", unsafe_allow_html=True)
+    
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        if st.button("🔄 Scan Again"):
+            st.session_state.scan_complete = False
+            st.session_state.events = []
+            st.session_state.page = 'scan'
+            st.rerun()
+    with col2:
+        if st.button("🏠 Home"):
+            st.session_state.page = 'home'
+            st.rerun()
+    with col3:
+        if st.button("🚪 Logout"):
+            for key in list(st.session_state.keys()):
+                del st.session_state[key]
+            st.session_state.page = 'home'
+            st.rerun()
+
+# =============================================================================
+# MAIN APP ROUTING
+# =============================================================================
+
+def main():
+    """Main application with page routing."""
+    load_css()
+    
+    if st.session_state.page == 'home':
+        show_home_page()
+    elif st.session_state.page == 'authenticate':
+        show_authenticate_page()
+    elif st.session_state.page == 'scan':
+        show_scan_page()
+    elif st.session_state.page == 'results':
+        show_results_page()
     else:
-        # Not authenticated
-        st.markdown("""
-        <div style="text-align: center; padding: 3rem 0;">
-            <h3>🔐 Get Started</h3>
-            <p style="color: var(--text-secondary); font-size: 1.1rem;">
-                Authenticate with your Google account to begin scanning your emails for important reminders.
-            </p>
-            <p style="color: var(--text-secondary); margin-top: 2rem;">
-                <strong>Features:</strong><br>
-                🤖 AI-powered event detection<br>
-                📅 Smart date parsing<br>
-                🎯 Priority-based organization<br>
-                🔒 Secure OAuth authentication
-            </p>
-        </div>
-        """, unsafe_allow_html=True)
+        show_home_page()
 
 if __name__ == "__main__":
     main()

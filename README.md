@@ -1,107 +1,72 @@
 # Smart Email Reminder System
 
-[![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://www.python.org/)
+[![Python](https://img.shields.io/badge/Python-3.12+-blue.svg)](https://www.python.org/)
 [![Gmail API](https://img.shields.io/badge/Gmail-API-red.svg)](https://developers.google.com/gmail/api)
 [![spaCy](https://img.shields.io/badge/spaCy-NLP-orange.svg)](https://spacy.io/)
+[![Streamlit](https://img.shields.io/badge/Streamlit-Web-red.svg)](https://streamlit.io/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-An intelligent email reminder system that uses natural language processing to automatically scan Gmail inboxes, identify deadlines, meetings, and other actionable events, and send timely desktop notifications.
+An intelligent email reminder system with a beautiful web interface that uses AI/NLP to automatically scan Gmail inboxes, identify deadlines, meetings, and other actionable events, and send email notifications for urgent items.
 
 ## Table of Contents
 
 - [Overview](#overview)
-- [Architecture](#architecture)
 - [Features](#features)
 - [Prerequisites](#prerequisites)
 - [Installation](#installation)
 - [Configuration](#configuration)
 - [Usage](#usage)
-- [Testing](#testing)
-- [Deployment](#deployment)
-- [Security](#security)
+- [Web Dashboard](#web-dashboard)
 - [Project Structure](#project-structure)
+- [Security](#security)
 - [Contributing](#contributing)
 - [License](#license)
 
 ## Overview
 
-The Smart Email Reminder System is a Python application that uses natural language processing to scan Gmail inboxes and identify important events like deadlines and meetings. It automatically sends desktop notifications to help users stay on top of their schedule.
+The Smart Email Reminder System is a modern web application built with Streamlit that uses natural language processing to scan Gmail inboxes and identify important events like deadlines and meetings. It features a multi-page navigation interface with AI-powered event detection and automatic email notifications for urgent items.
 
 ### Key Capabilities
 
-- **Intelligent Event Detection**: Uses spaCy NER and dateparser for robust temporal expression recognition
-- **Real-time Email Processing**: Continuously monitors Gmail inbox with configurable intervals
-- **Cross-platform Notifications**: Native desktop notifications with fallback mechanisms
-- **Enterprise Security**: OAuth 2.0 authentication with secure credential management
-- **Modular Architecture**: Clean separation of concerns for maintainability and extensibility
-
-## Architecture
-
-The system implements a modular, microservices-inspired architecture with five core components:
-
-### 1. Authentication Module (`auth.py`)
-- OAuth 2.0 flow implementation for Gmail API access
-- Secure token management and refresh logic
-- Credential validation and error handling
-
-### 2. Email Ingestion Module (`email_fetcher.py`)
-- Server-side email filtering using Gmail search queries
-- Efficient API usage with pagination support
-- Raw email content retrieval and metadata extraction
-
-### 3. Content Processing Module (`email_parser.py`)
-- Robust email parsing for complex MIME structures
-- Header decoding and character encoding handling
-- Clean text extraction from multipart messages
-
-### 4. Intelligence Engine (`intelligence_module.py`)
-- spaCy-powered Named Entity Recognition for temporal expressions
-- Advanced date parsing with context awareness
-- Actionable event classification and prioritization
-
-### 5. Notification System (`notifier.py`)
-- Cross-platform desktop notification delivery
-- Windows toast notification support with PowerShell integration
-- Email notification fallback mechanisms
-
-### 6. Orchestration Layer (`main.py`)
-- Workflow coordination and scheduling
-- Error handling and recovery mechanisms
-- Continuous operation with configurable intervals
+- **🎨 Beautiful Web Interface**: Modern multi-page Streamlit dashboard with dark theme
+- **🤖 AI-Powered Event Detection**: Uses spaCy NER for intelligent temporal expression recognition
+- **📧 Email Notifications**: Automatic email alerts for urgent and important events
+- **🔒 Secure Authentication**: OAuth 2.0 with Google for safe Gmail access
+- **📊 Visual Analytics**: Interactive dashboard with event statistics and urgency indicators
+- **⚡ Real-time Processing**: Fast email scanning with smart filtering
 
 ## Features
 
-### Autonomous Operation
-- Continuous background monitoring with configurable intervals
-- Zero manual intervention required after initial setup
-- Intelligent duplicate detection and notification throttling
+### 🌐 Multi-Page Web Dashboard
+- **Home**: Beautiful landing page with feature showcase
+- **Authenticate**: Secure OAuth 2.0 Google login
+- **Scan**: Configure and execute inbox analysis with progress tracking
+- **Results**: Visual event display with urgency color-coding and statistics
 
-### Advanced NLP Processing
-- spaCy-based Named Entity Recognition for temporal expressions
-- Context-aware date parsing with multiple format support
-- Intelligent event classification and urgency assessment
+### 🧠 Advanced NLP Processing
+- spaCy-based Named Entity Recognition for dates, times, and events
+- Context-aware date parsing supporting natural language
+- Intelligent urgency classification (urgent/medium/low)
+- Smart duplicate detection and event deduplication
 
-### Comprehensive Email Analysis
-- Support for complex email formats (HTML, plain text, multipart)
-- Header decoding for international character sets
-- Subject line and body content integration
+### 📧 Email Notification System
+- Automatic email alerts for urgent and important events
+- Configurable notification preferences
+- Beautiful email formatting with event summaries
+- SMTP-based delivery with Gmail integration
 
-### Intelligent Notifications
-- Native desktop notifications with rich formatting
-- Windows-specific toast notifications with PowerShell integration
-- Console fallback for guaranteed visibility
-- Configurable notification urgency levels
+### 🎨 Modern User Experience
+- Clean, intuitive navigation flow
+- Dark theme with gradient accents
+- Responsive cards and statistics
+- Real-time progress indicators
+- Mobile-friendly design
 
-### Enterprise-Grade Security
+### 🔐 Enterprise-Grade Security
 - OAuth 2.0 token-based authentication
 - Secure credential storage with environment variables
 - No sensitive data in application code
 - Automatic token refresh and session management
-
-### Performance Optimized
-- Server-side email filtering to minimize API calls
-- Efficient text processing with caching mechanisms
-- Background operation with minimal system resource usage
 
 ## Prerequisites
 
@@ -119,18 +84,24 @@ The system implements a modular, microservices-inspired architecture with five c
 
 ### Python Dependencies
 ```bash
-# Core dependencies
-google-api-python-client==2.0.0
-google-auth-httplib2==0.1.0
-google-auth-oauthlib==1.0.0
-spacy==3.7.0
-dateparser==1.1.0
-plyer==2.1.0
-python-dotenv==1.0.0
-schedule==1.2.0
+# Web Framework
+streamlit>=1.28.0
+
+# Google API
+google-api-python-client>=2.0.0
+google-auth-httplib2>=0.1.0
+google-auth-oauthlib>=1.0.0
+
+# NLP & Processing
+spacy>=3.7.0
+dateparser>=1.1.0
+
+# Utilities
+python-dotenv>=1.0.0
+plyer>=2.1.0
 
 # spaCy language model
-en-core-web-sm==3.7.0
+en-core-web-sm>=3.7.0
 ```
 
 ## Installation
@@ -196,202 +167,140 @@ REMINDER_EMAIL=your_reminder_email@gmail.com
 
 ## Usage
 
-### Quick Start
-```bash
-# Install dependencies
-pip install -r requirements.txt
+### Web Dashboard (Recommended)
+Launch the beautiful Streamlit web interface:
 
-# Download spaCy model
-python -m spacy download en_core_web_sm
-
-# Option 1: Launch Web Dashboard (Recommended)
-python launch_dashboard.py
-# OR
-streamlit run app.py
-
-# Option 2: Run Command-Line Version
-python main.py --once
-```
-
-### Web Dashboard
-The Smart Email Reminder now includes a beautiful, modern web interface built with Streamlit:
-
-- **🎨 Modern UI**: Dark theme with elegant design
-- **📊 Real-time Analytics**: View statistics and event summaries  
-- **🔍 Interactive Scanning**: Configure scan parameters and view results instantly
-- **📅 Event Cards**: Beautiful cards showing events with urgency indicators
-- **🔒 Secure Authentication**: OAuth 2.0 integration with Google
-
-To access the web dashboard:
 ```bash
 streamlit run app.py
 ```
 
 The dashboard will open at `http://localhost:8501` in your browser.
 
-### Command Line Options
+### Dashboard Navigation Flow
+
+1. **🏠 Home Page**: 
+   - Welcome screen with feature overview
+   - Click "Start Scanning" to begin
+
+2. **🔐 Authenticate Page**:
+   - Secure OAuth 2.0 Google login
+   - One-time authentication (credentials cached)
+   - Displays your authenticated email
+
+3. **🔍 Scan Page**:
+   - Configure time range (1, 3, 7, 14, or 30 days)
+   - Set maximum emails to scan (10-100)
+   - Enable/disable email notifications for urgent items
+   - Real-time progress tracking
+   - Automatic email notification for urgent events
+
+4. **📊 Results Page**:
+   - Visual statistics dashboard
+   - Color-coded event cards (🚨 Urgent, ⚠️ Medium, 📅 Low)
+   - Event details with dates and source emails
+   - Options to scan again or logout
+
+### Command Line Version
+For automated/scheduled scans:
+
 ```bash
-python main.py              # Continuous mode with 15-minute intervals
-python main.py --once       # Single execution mode
-python main.py --help       # Display help information
+# Single scan
+python main.py --once
+
+# Continuous monitoring
+python main.py
 ```
 
 ### First Run
 On first execution, the system will:
 1. Open browser for Gmail OAuth authentication
-2. Request permission to access your Gmail account
-3. Generate and store access tokens locally
-4. Begin monitoring for new emails
+2. Request permission to access your Gmail account (read-only)
+3. Generate and store access tokens locally in `token.json`
+4. Begin processing your emails
 
-## Testing
+## Web Dashboard
 
-### Notification Testing
-Before running the full system, verify that notifications work on your system:
+### Interface Features
 
-```bash
-# Test notification system
-python test_notifications.py
+🎨 **Modern Design**
+- Clean dark theme with gradient accents
+- Responsive layout for all screen sizes
+- Intuitive navigation flow
+- No sidebar - pure page-based navigation
+
+📊 **Event Visualization**
+- Color-coded urgency indicators:
+  - 🚨 **Red**: Urgent (≤1 day or overdue)
+  - ⚠️ **Orange**: Medium (2-7 days)
+  - 📅 **Green**: Low (8+ days)
+- Event statistics dashboard
+- Source email tracking
+
+🔔 **Smart Notifications**
+- Automatic email alerts for urgent/important events
+- Configurable notification preferences
+- Beautiful email formatting with event summaries
+- Sent to your authenticated Gmail address
+
+### Dashboard Screenshots
+The dashboard features:
+- Hero section with feature cards
+- Progress tracking during scans
+- Beautiful event cards with context
+- Statistics overview (Total, Urgent, Medium, Upcoming)
+
+## Project Structure
+
+```
+NLP_Project_Email_Remainder/
+├── app.py                      # Main Streamlit web dashboard
+├── main.py                     # CLI version (optional)
+├── auth.py                     # Gmail OAuth authentication
+├── email_fetcher.py            # Email retrieval from Gmail API
+├── email_parser.py             # Email parsing and text extraction
+├── intelligence_module.py      # NLP event detection engine
+├── notifier.py                 # Email notification system
+├── check_setup.py              # Environment verification script
+├── credentials.json            # Google OAuth credentials (create this)
+├── token.json                  # OAuth tokens (auto-generated)
+├── .env                        # Environment variables (create this)
+├── .env.example                # Environment template
+├── requirements.txt            # Python dependencies
+└── README.md                   # This file
 ```
 
-This will send multiple test notifications and provide troubleshooting tips if they don't appear.
+### Core Modules
 
-### Email Reminder Testing
-Test the email reminder functionality:
-
-```bash
-# Test email sending (requires SENDER_EMAIL and SENDER_APP_PASSWORD in .env)
-python test_email_reminder.py
-```
-
-### Automated Testing
-```bash
-# Run notification tests
-python test_notifications.py
-
-# Send test email with sample events
-python send_test_email.py
-```
-
-### Manual Testing
-1. **Test Notifications**:
-   ```bash
-   python test_notifications.py
-   ```
-
-2. **Send Test Email**:
-   ```bash
-   python send_test_email.py
-   ```
-
-3. **Run Detection**:
-   ```bash
-   python main.py --once
-   ```
-
-4. **Expected Results**: The system should detect events such as:
-   - **Q3 Financial Report**: Due next Friday
-   - **Client Presentation**: October 28th at 2 PM PST
-   - **Team Standup**: Next Tuesday at 10 AM EST
-   - **Budget Review**: Next Wednesday at 3 PM EST
-   - **Project Kickoff**: December 15th at 11 AM EST
-   - **Code Review**: 25th of current month
-   - **Training Session**: Next Monday at 9 AM EST
-
-### Troubleshooting Notifications
-
-If notifications don't appear on Windows 11:
-
-1. **Check Windows Settings**:
-   - Go to Settings > System > Notifications & actions
-   - Ensure "Get notifications from apps and other senders" is ON
-   - Look for "Smart Email Reminder" in the app list and enable it
-
-2. **Focus Assist**:
-   - Check if Focus Assist (Do Not Disturb) is turned OFF
-   - Go to Settings > System > Focus Assist
-
-3. **Run as Administrator**:
-   - Try running the script with administrator privileges
-
-4. **Restart System**:
-   - Restart your computer if notifications still don't appear
-
-The system includes multiple fallback mechanisms and will always show notifications in the console even if desktop notifications fail.
-
-## Deployment
-
-### Production Recommendations
-
-#### Linux/macOS (Cron)
-```bash
-# Edit crontab
-crontab -e
-
-# Add line for 15-minute intervals
-*/15 * * * * cd /path/to/project && python3 main.py --once >> cron.log 2>&1
-
-# Alternative: Hourly execution
-0 * * * * cd /path/to/project && python3 main.py --once >> cron.log 2>&1
-```
-
-#### Windows (Task Scheduler)
-1. Open Task Scheduler
-2. Create new task with these settings:
-   - **Program**: `python.exe`
-   - **Arguments**: `main.py --once`
-   - **Start in**: `D:\Path\To\Your\Project`
-   - **Trigger**: Daily, every 15 minutes
-
-#### Docker Deployment
-```dockerfile
-FROM python:3.9-slim
-
-WORKDIR /app
-COPY requirements.txt .
-RUN pip install -r requirements.txt
-RUN python -m spacy download en_core_web_sm
-
-COPY . .
-CMD ["python", "main.py", "--once"]
-```
+- **`app.py`**: Multi-page Streamlit dashboard with navigation (Home → Authenticate → Scan → Results)
+- **`intelligence_module.py`**: spaCy-based NLP for event detection and urgency classification
+- **`notifier.py`**: Email notification system with SMTP integration
+- **`email_fetcher.py`**: Gmail API integration with server-side filtering
+- **`email_parser.py`**: Robust MIME parsing for complex email formats
+- **`auth.py`**: OAuth 2.0 authentication and token management
 
 ## Security
 
 ### Credential Management
 - OAuth 2.0 tokens are stored locally and automatically refreshed
 - Sensitive files (`credentials.json`, `token.json`) are excluded from version control
-- Environment variables used for configuration
-- No hardcoded passwords or API keys
+- Environment variables used for email notification configuration
+- No hardcoded passwords or API keys in source code
 
 ### Best Practices
-- Regularly rotate OAuth tokens
-- Use app passwords instead of main account passwords
-- Keep credentials.json secure and never commit to repositories
+- Use Gmail App Passwords for SMTP (never use main account password)
+- Keep `credentials.json` secure and never commit to repositories
+- Regularly review OAuth permissions in Google Account settings
 - Monitor API usage in Google Cloud Console
 
-## Project Structure
+### Privacy
+- All email processing happens locally on your machine
+- No data is sent to external servers (except Google's Gmail API)
+- Email content is never stored permanently
+- Only temporary analysis for event detection
 
-```
-NLP_Project_Email_Remainder/
-├── � auth.py                 # Gmail OAuth 2.0 authentication
-├── 📄 email_fetcher.py        # Email search and retrieval
-├── 📄 email_parser.py         # Email content parsing
-├── 📄 intelligence_module.py  # NLP event detection
-├── 📄 notifier.py            # Notification system
-├── 📄 main.py                # Main orchestration
-├── 📄 requirements.txt       # Python dependencies
-├── 📄 .env.example          # Environment template
-├── � .gitignore            # Git ignore rules
-└── 📄 README.md             # Project documentation
-```
+## Contributing
 
-## � Contributing
-
-This project demonstrates modern Python development practices with:
-- Modular architecture and clean code principles
-- Comprehensive error handling and logging
-- Type hints and documentation
-- Automated testing and validation
+Contributions are welcome! Please feel free to submit a Pull Request.
 
 ### Development Setup
 ```bash
@@ -402,26 +311,27 @@ cd NLP_Project_Email_Remainder
 # Create feature branch
 git checkout -b feature/your-feature-name
 
-# Install development dependencies
-pip install -r requirements-dev.txt
+# Install dependencies
+pip install -r requirements.txt
+python -m spacy download en_core_web_sm
 
-# Run tests
-python -m pytest
+# Make your changes and test thoroughly
+streamlit run app.py
 ```
 
-## 📄 License
+## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## Acknowledgments
 
+- **Streamlit** for the amazing web framework
 - **Google Gmail API** for email access capabilities
 - **spaCy** for advanced natural language processing
 - **dateparser** for robust date and time parsing
-- **plyer** for cross-platform notification support
 
 ---
 
-**Built with ❤️ using Python, Google APIs, and modern NLP techniques**
+**Built with ❤️ using Python, Streamlit, Google APIs, and modern NLP**
 
-*Developed by Yaswanth Setty - Intelligent Email Processing for the Modern Professional*
+*Never miss another deadline hiding in your inbox!*
